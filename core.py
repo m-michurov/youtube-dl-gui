@@ -107,7 +107,7 @@ def download_audio(
     return download_folder / f'{video_id}.{codec}'
 
 
-def crop_thumbnail(mp3: Path, thumbnail_size: (int, int) = (1024, 1024)) -> None:
+def crop_thumbnail(mp3: Path, thumbnail_size: (int, int) = (768, 768)) -> None:
     id3 = ID3(str(mp3))
 
     key_album_cover = 'APIC'
