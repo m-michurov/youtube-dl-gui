@@ -10,9 +10,9 @@ from PyQt6.QtCore import (
     QRunnable,
     pyqtSignal as Signal,
     QThreadPool,
-    pyqtSlot as Slot, QObject
+    pyqtSlot as Slot, QObject,
 )
-from PyQt6.QtGui import QIcon, QRegularExpressionValidator
+from PyQt6.QtGui import QIcon, QRegularExpressionValidator, QKeyEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QVBoxLayout,
-    QErrorMessage
+    QErrorMessage,
 )
 import qt_material
 
@@ -69,6 +69,9 @@ class MainWindow(QMainWindow):
         key_download_folder = 'download_folder'
         self.download_folder_input.setText(preferences.get(key_download_folder, str(Path.cwd())))
         self.download_folder_input.textChanged[str].connect(lambda value: preferences.set(key_download_folder, value))
+
+        clipboard = QApplication.clipboard()
+        self.url_input.setText(clipboard.text(mode=clipboard.Mode.Clipboard))
 
     def _setup_ui(self) -> None:
         self.setWindowIcon(QIcon('icon.ico'))
@@ -120,6 +123,19 @@ class MainWindow(QMainWindow):
     def _set_input_enabled(self, enabled: bool) -> None:
         for control in self.input_controls:
             control.setEnabled(enabled)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if self.download_button.isEnabled() and event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return):
+            self.download_button_pressed()
+            event.accept()
+            return
+
+        if self.url_input.isEnabled() \
+                and QApplication.keyboardModifiers() == Qt.KeyboardModifier.ControlModifier \
+                and event.key() == Qt.Key.Key_V:
+            self.url_input.setText(QApplication.clipboard().text())
+            event.accept()
+            return
 
     @Slot()
     def reset_status(self) -> None:
@@ -181,6 +197,8 @@ class MainWindow(QMainWindow):
     @Slot()
     def enable_input(self) -> None:
         self._set_input_enabled(enabled=True)
+
+        self.url_input.selectAll()
 
 
 def apply_random_theme(app: QApplication) -> None:
