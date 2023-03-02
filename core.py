@@ -5,13 +5,13 @@ from pathlib import Path
 from shutil import which
 from typing import NamedTuple, Callable, Any
 
-import youtube_dl
+import yt_dlp as youtube_dl
 from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.id3 import ID3, APIC
 
 FFMPEG_COMMAND = 'ffmpeg'
-YOUTUBE_DL_COMMAND = 'youtube-dl'
+YOUTUBE_DL_COMMAND = 'yt-dlp'
 
 
 def detect_missing_commands() -> list[str]:
