@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 )
 import qt_material
 
-from core import VIDEO_URL_REGEX_STR, get_video_id, download
+from core import VIDEO_URL_REGEX_STR, VIDEO_URL_REGEX, get_video_id, download
 from preferences import Preferences
 
 
@@ -71,7 +71,11 @@ class MainWindow(QMainWindow):
         self.download_folder_input.textChanged[str].connect(lambda value: preferences.set(key_download_folder, value))
 
         clipboard = QApplication.clipboard()
-        self.url_input.setText(clipboard.text(mode=clipboard.Mode.Clipboard))
+
+        maybe_url = clipboard.text(mode=clipboard.Mode.Clipboard)
+        if VIDEO_URL_REGEX.match(maybe_url):
+            self.url_input.setText(maybe_url)
+            self.url_input.selectAll()
 
     def _setup_ui(self) -> None:
         self.setWindowIcon(QIcon('icon.ico'))
