@@ -9,6 +9,7 @@ import yt_dlp as youtube_dl
 from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.id3 import ID3, APIC
+from mutagen.easyid3 import EasyID3
 
 FFMPEG_COMMAND = 'ffmpeg'
 YOUTUBE_DL_COMMAND = 'yt-dlp'
@@ -94,6 +95,7 @@ def download_audio(
                 'already_have_thumbnail': False
             }
         ],
+        'addmetadata': True,
         'logger': DiscardLogger(),
         'progress_hooks': [progress_hook],
         'writethumbnail': True,
@@ -144,20 +146,43 @@ def crop_thumbnail(mp3: Path, thumbnail_size: (int, int) = (512, 512)) -> None:
         desc=u'Cover',
         data=image_data
     )
+
     id3.save(mp3, v2_version=3)
+
+
+def cleanup_metadata(mp3: Path) -> tuple[str, str]:
+    id3 = EasyID3(str(mp3))
+
+    key_album = 'album'
+    key_title = 'title'
+    key_artist = 'artist'
+
+    title: str = id3[key_title][0]
+    artist: str = id3[key_artist][0]
+    album: str = id3.get(key_album, [None])[0]
+
+    title = re.sub(rf'{artist}\s+.+?\s+', '', title)
+    id3[key_title] = title
+
+    if not album:
+        id3[key_album] = title
+
+    id3.save(str(mp3))
+    return title, artist
 
 
 def download(
         video_id: str,
         download_folder: Path,
-        status_changed: Callable[[str], Any | None]
-) -> Path:
+        status_changed: Callable[[str], Any | None],
+        return_title_and_artist: bool = False
+) -> Path | tuple[Path, str, str]:
     def youtube_dl_progress_changed(progress: YouTubeDLProgress) -> None:
         match progress.status:
             case YouTubeDLStatus.DOWNLOADING:
                 status_changed(f'Downloading {progress.completion_percentage}')
             case YouTubeDLStatus.FINISHED:
-                status_changed(f'Applying postprocessing')
+                status_changed(f'Converting')
             case YouTubeDLStatus.ERROR:
                 status_changed(f'Error occurred')
 
@@ -165,6 +190,11 @@ def download(
     mp3_path = download_audio(video_id, download_folder, on_progress_changed=youtube_dl_progress_changed)
     status_changed(f'Cropping thumbnail')
     crop_thumbnail(mp3_path)
+    status_changed(f'Cleaning up metadata')
+    title, artist = cleanup_metadata(mp3_path)
     status_changed(f'Saved as {mp3_path}')
+
+    if return_title_and_artist:
+        return mp3_path, title, artist
 
     return mp3_path
