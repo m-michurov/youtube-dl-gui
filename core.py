@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import re
 from enum import Enum
@@ -178,21 +180,20 @@ def download(
         return_title_and_artist: bool = False
 ) -> Path | tuple[Path, str, str]:
     def youtube_dl_progress_changed(progress: YouTubeDLProgress) -> None:
-        match progress.status:
-            case YouTubeDLStatus.DOWNLOADING:
-                status_changed(f'Downloading {progress.completion_percentage}')
-            case YouTubeDLStatus.FINISHED:
-                status_changed(f'Converting')
-            case YouTubeDLStatus.ERROR:
-                status_changed(f'Error occurred')
+        if progress.status is YouTubeDLStatus.DOWNLOADING:
+            status_changed(f'Downloading {progress.completion_percentage}')
+        if progress.status is YouTubeDLStatus.FINISHED:
+            status_changed(f'Converting')
+        if progress.status is YouTubeDLStatus.ERROR:
+            status_changed(f'Error occurred')
 
-    status_changed(f'Initializing download')
+    status_changed(f'Starting download')
     mp3_path = download_audio(video_id, download_folder, on_progress_changed=youtube_dl_progress_changed)
     status_changed(f'Cropping thumbnail')
     crop_thumbnail(mp3_path)
     status_changed(f'Cleaning up metadata')
     title, artist = cleanup_metadata(mp3_path)
-    status_changed(f'Saved as {mp3_path}')
+    status_changed(f'Finished')
 
     if return_title_and_artist:
         return mp3_path, title, artist
