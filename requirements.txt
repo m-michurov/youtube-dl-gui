@@ -1,5 +1,5 @@
-mutagen~=1.45.1
-Pillow~=9.2.0
-PyQt6~=6.3.1
-qt_material~=2.12
-youtube_dl~=2021.12.17
+mutagen~=1.46.0
+Pillow~=9.4.0
+PyQt6~=6.4.2
+qt_material~=2.14
+yt_dlp~=2023.2.17
