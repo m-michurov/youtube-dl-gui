@@ -186,13 +186,13 @@ def download(
             case YouTubeDLStatus.ERROR:
                 status_changed(f'Error occurred')
 
-    status_changed(f'Initializing download')
+    status_changed(f'Starting download')
     mp3_path = download_audio(video_id, download_folder, on_progress_changed=youtube_dl_progress_changed)
     status_changed(f'Cropping thumbnail')
     crop_thumbnail(mp3_path)
     status_changed(f'Cleaning up metadata')
     title, artist = cleanup_metadata(mp3_path)
-    status_changed(f'Saved as {mp3_path}')
+    status_changed(f'Finished')
 
     if return_title_and_artist:
         return mp3_path, title, artist
