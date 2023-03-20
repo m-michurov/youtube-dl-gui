@@ -5,6 +5,8 @@ from tkinter import ttk, filedialog
 from tkinter.messagebox import showerror
 from typing import Callable, Any
 
+import sv_ttk
+
 from core import detect_missing_commands, get_video_id, download
 from preferences import Preferences
 
@@ -153,8 +155,9 @@ def show() -> None:
     root.title(WINDOW_TITLE)
     root.iconbitmap(ICON_PATH)
 
-    style = ttk.Style()
-    style.theme_use('xpnative')
+    # style = ttk.Style()
+    # style.theme_use('xpnative')
+    sv_ttk.set_theme('light')
 
     MainWindow(root).pack(expand=True, anchor=tk.CENTER, fill=tk.BOTH)
 
