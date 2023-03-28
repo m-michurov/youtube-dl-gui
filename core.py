@@ -72,6 +72,7 @@ def download_audio(
         on_progress_changed: Callable[[YouTubeDLProgress], Any | None]
 ) -> Path:
     codec = 'mp3'
+    mp3_path = download_folder / f'{video_id}.{codec}'
 
     def progress_hook(progress: dict[str, str | int | float]) -> None:
         on_progress_changed(
@@ -105,10 +106,15 @@ def download_audio(
         'quiet': True
     }
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f'https://www.youtube.com/watch?v={video_id}'])
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f'https://www.youtube.com/watch?v={video_id}'])
 
-    return download_folder / f'{video_id}.{codec}'
+        return mp3_path
+    except Exception:
+        mp3_path.unlink(missing_ok=True)
+
+        raise
 
 
 def crop_thumbnail(mp3: Path, thumbnail_size: (int, int) = (512, 512)) -> None:
@@ -152,22 +158,26 @@ def crop_thumbnail(mp3: Path, thumbnail_size: (int, int) = (512, 512)) -> None:
     id3.save(mp3, v2_version=3)
 
 
-def cleanup_metadata(mp3: Path) -> tuple[str, str]:
+def cleanup_metadata(
+        mp3: Path,
+        title: str | None = None,
+        artist: str | None = None,
+        album: str | None = None
+) -> tuple[str, str]:
     id3 = EasyID3(str(mp3))
 
     key_album = 'album'
     key_title = 'title'
     key_artist = 'artist'
 
-    title: str = id3[key_title][0]
-    artist: str = id3[key_artist][0]
-    album: str = id3.get(key_album, [None])[0]
+    title: str = title if title is not None else id3[key_title][0]
+    artist: str = artist if artist is not None else id3[key_artist][0]
+    album: str = album if album is not None else id3.get(key_album, [None])[0]
 
     title = re.sub(rf'{artist}\s+.+?\s+', '', title)
     id3[key_title] = title
-
-    if not album:
-        id3[key_album] = title
+    id3[key_artist] = artist
+    id3[key_album] = title if not album else album
 
     id3.save(str(mp3))
     return title, artist
@@ -177,7 +187,10 @@ def download(
         video_id: str,
         download_folder: Path,
         status_changed: Callable[[str], Any | None],
-        return_title_and_artist: bool = False
+        return_title_and_artist: bool = False,
+        overwrite_title: str | None = None,
+        overwrite_artist: str | None = None,
+        overwrite_album: str | None = None
 ) -> Path | tuple[Path, str, str]:
     def youtube_dl_progress_changed(progress: YouTubeDLProgress) -> None:
         if progress.status is YouTubeDLStatus.DOWNLOADING:
@@ -189,13 +202,24 @@ def download(
 
     status_changed(f'Starting download')
     mp3_path = download_audio(video_id, download_folder, on_progress_changed=youtube_dl_progress_changed)
-    status_changed(f'Cropping thumbnail')
-    crop_thumbnail(mp3_path)
-    status_changed(f'Cleaning up metadata')
-    title, artist = cleanup_metadata(mp3_path)
-    status_changed(f'Finished')
 
-    if return_title_and_artist:
-        return mp3_path, title, artist
+    try:
+        status_changed(f'Cropping thumbnail')
+        crop_thumbnail(mp3_path)
+        status_changed(f'Cleaning up metadata')
+        title, artist = cleanup_metadata(
+            mp3_path,
+            title=overwrite_title,
+            artist=overwrite_artist,
+            album=overwrite_album
+        )
+        status_changed(f'Finished')
 
-    return mp3_path
+        if return_title_and_artist:
+            return mp3_path, title, artist
+
+        return mp3_path
+    except Exception:
+        mp3_path.unlink(missing_ok=True)
+
+        raise
